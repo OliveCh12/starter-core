@@ -25,8 +25,6 @@ export default function HomePage() {
                 >
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="text-lg"
                   >
                     Deploy your own
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -112,11 +110,7 @@ export default function HomePage() {
             </div>
             <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
               <a href="https://github.com/nextjs/saas-starter" target="_blank">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg"
-                >
+                <Button>
                   View the code
                   <ArrowRight className="ml-3 h-6 w-6" />
                 </Button>
