@@ -1,9 +1,8 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Inter, Roboto } from 'next/font/google';
+import { Manrope, Inter } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
-import { ro } from '@faker-js/faker';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
@@ -16,7 +15,6 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 const inter = Inter({ subsets: ['latin'] });
-const roboto = Roboto({ subsets: ['latin'] });
 
 export default function RootLayout({
   children
@@ -26,7 +24,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${roboto.className}`}
+      className={`${inter.className}`}
     >
       <body className="min-h-[100dvh] bg-background text-foreground">
         <SWRConfig

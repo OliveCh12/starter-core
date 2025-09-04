@@ -73,13 +73,13 @@ export default async function PricingPage() {
 
     return (
       <main className="min-h-screen bg-background">
-        <div className="">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           {/* Header Section */}
-          <div className="text-center py-16">
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+          <div className="text-center mb-12 sm:mb-16">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Simple, transparent pricing
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Choose the plan that's right for your team. Start with a free trial and upgrade anytime.
             </p>
           </div>
