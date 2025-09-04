@@ -1,6 +1,6 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { activityLogs, teamMembers, teams, users, posts, comments } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { DatabaseError } from './connection';
@@ -97,7 +97,8 @@ export async function getActivityLogs() {
         action: activityLogs.action,
         timestamp: activityLogs.timestamp,
         ipAddress: activityLogs.ipAddress,
-        userName: users.name
+        userName: users.firstName,
+        userLastName: users.lastName
       })
       .from(activityLogs)
       .leftJoin(users, eq(activityLogs.userId, users.id))
@@ -126,7 +127,8 @@ export async function getTeamForUser() {
                 user: {
                   columns: {
                     id: true,
-                    name: true,
+                    firstName: true,
+                    lastName: true,
                     email: true
                   }
                 }
@@ -140,5 +142,202 @@ export async function getTeamForUser() {
     return result?.team || null;
   } catch (error) {
     handleDatabaseError(error, 'retrieve team data');
+  }
+}
+
+export async function getUserProfile(userId?: number) {
+  const user = userId ? { id: userId } : await getUser();
+  if (!user) {
+    return null;
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, user.id), isNull(users.deletedAt)))
+      .limit(1);
+
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    handleDatabaseError(error, 'retrieve user profile');
+  }
+}
+
+export async function updateUserProfile(
+  userId: number,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    bio?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    streetAddress?: string;
+    city?: string;
+    region?: string;
+    postalCode?: string;
+    country?: string;
+    profileImageUrl?: string;
+  }
+) {
+  try {
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date()
+    };
+
+    await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId));
+
+    return { success: true };
+  } catch (error) {
+    handleDatabaseError(error, 'update user profile');
+  }
+}
+
+export async function getPosts() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const userWithTeam = await getUserWithTeam(user.id);
+    
+    // Build the where condition step by step
+    let whereCondition = and(
+      isNull(posts.deletedAt),
+      or(
+        eq(posts.visibility, 'public'),
+        eq(posts.authorId, user.id)
+      )
+    );
+
+    // Add team posts if user has a team
+    if (userWithTeam?.teamId) {
+      const teamMembersData = await db
+        .select({ userId: teamMembers.userId })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, userWithTeam.teamId));
+      
+      const teamMemberIds = teamMembersData.map(tm => tm.userId);
+      
+      if (teamMemberIds.length > 0) {
+        whereCondition = and(
+          isNull(posts.deletedAt),
+          or(
+            eq(posts.visibility, 'public'),
+            eq(posts.authorId, user.id),
+            and(
+              eq(posts.visibility, 'friends_only'),
+              sql`${posts.authorId} IN (${sql.join(teamMemberIds.map(id => sql`${id}`), sql`, `)})`
+            )
+          )
+        );
+      }
+    }
+    
+    const result = await db.query.posts.findMany({
+      where: whereCondition,
+      with: {
+        author: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImageUrl: true,
+          }
+        },
+        reactions: true,
+        comments: {
+          where: isNull(comments.deletedAt),
+        }
+      },
+      orderBy: desc(posts.createdAt),
+      limit: 50
+    });
+
+    return result.map(post => ({
+      ...post,
+      _count: {
+        comments: post.comments.length,
+        reactions: post.reactions.length,
+      }
+    }));
+  } catch (error) {
+    handleDatabaseError(error, 'retrieve posts');
+  }
+}
+
+export async function getPostById(postId: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const post = await db.query.posts.findFirst({
+      where: and(
+        eq(posts.id, postId),
+        isNull(posts.deletedAt)
+      ),
+      with: {
+        author: {
+          columns: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            profileImageUrl: true,
+          }
+        },
+        reactions: {
+          with: {
+            user: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        },
+        comments: {
+          where: isNull(comments.deletedAt),
+          with: {
+            author: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profileImageUrl: true,
+              }
+            },
+            reactions: true,
+          },
+          orderBy: desc(comments.createdAt)
+        }
+      }
+    });
+
+    if (!post) {
+      return null;
+    }
+
+    const userWithTeam = await getUserWithTeam(user.id);
+    const canView = post.visibility === 'public' || 
+                   post.authorId === user.id ||
+                   (post.visibility === 'friends_only' && userWithTeam?.teamId);
+
+    if (!canView) {
+      return null;
+    }
+
+    return post;
+  } catch (error) {
+    handleDatabaseError(error, 'retrieve post');
   }
 }

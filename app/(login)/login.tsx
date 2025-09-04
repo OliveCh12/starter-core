@@ -53,11 +53,57 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 autoComplete="email"
                 defaultValue={state.email}
                 required
-                maxLength={50}
+                maxLength={255}
                 placeholder="Enter your email"
               />
             </div>
           </div>
+          
+          {mode === 'signup' && (
+            <>
+              <div>
+                <Label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  First Name
+                </Label>
+                <div className="mt-1">
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    autoComplete="given-name"
+                    defaultValue={state.firstName}
+                    required
+                    maxLength={100}
+                    placeholder="Enter your first name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Last Name
+                </Label>
+                <div className="mt-1">
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    autoComplete="family-name"
+                    defaultValue={state.lastName}
+                    required
+                    maxLength={100}
+                    placeholder="Enter your last name"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div>
             <Label

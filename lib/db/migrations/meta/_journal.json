@@ -5,8 +5,36 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1726443359662,
-      "tag": "0000_soft_the_anarchist",
+      "when": 1756991772595,
+      "tag": "0000_high_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756992340417,
+      "tag": "0001_neat_sumo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756992453970,
+      "tag": "0002_tidy_rick_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756994249369,
+      "tag": "0003_aberrant_the_spike",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756994286542,
+      "tag": "0004_curious_tempest",
       "breakpoints": true
     }
   ]

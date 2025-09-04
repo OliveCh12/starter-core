@@ -1,6 +1,6 @@
 {
-  "id": "be32f8e9-e5ab-4ad2-aaa3-6d5d845c3d78",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "f8ccf88b-3086-4b06-ab79-db28c22d6e20",
+  "prevId": "1393e00d-877c-4d29-aa74-45c512596283",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1499,15 +1499,13 @@
           "name": "first_name",
           "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'Unknown'"
+          "notNull": true
         },
         "last_name": {
           "name": "last_name",
           "type": "varchar(100)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'User'"
+          "notNull": true
         },
         "email": {
           "name": "email",
@@ -1536,7 +1534,7 @@
         },
         "phone_number": {
           "name": "phone_number",
-          "type": "varchar(20)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },

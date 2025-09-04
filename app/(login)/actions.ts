@@ -9,6 +9,8 @@ import {
   teams,
   teamMembers,
   activityLogs,
+  roles,
+  posts,
   type NewUser,
   type NewTeam,
   type NewTeamMember,
@@ -101,13 +103,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 });
 
 const signUpSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email(),
   password: z.string().min(8),
   inviteId: z.string().optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const { firstName, lastName, email, password, inviteId } = data;
 
   const existingUser = await db
     .select()
@@ -118,17 +122,27 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   if (existingUser.length > 0) {
     return {
       error: 'Failed to create user. Please try again.',
+      firstName,
+      lastName,
       email,
       password
     };
   }
 
   const passwordHash = await hashPassword(password);
+  
+  // Get default user role
+  const defaultRole = await db.query.roles.findFirst({
+    where: eq(roles.name, 'user')
+  });
 
   const newUser: NewUser = {
+    firstName,
+    lastName,
     email,
     passwordHash,
-    role: 'owner' // Default role, will be overridden if there's an invitation
+    emailVerified: false,
+    roleId: defaultRole?.id
   };
 
   const [createdUser] = await db.insert(users).values(newUser).returning();
@@ -136,6 +150,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   if (!createdUser) {
     return {
       error: 'Failed to create user. Please try again.',
+      firstName,
+      lastName,
       email,
       password
     };
@@ -176,7 +192,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .where(eq(teams.id, teamId))
         .limit(1);
     } else {
-      return { error: 'Invalid or expired invitation.', email, password };
+      return { error: 'Invalid or expired invitation.', firstName, lastName, email, password };
     }
   } else {
     // Create a new team if there's no invitation
@@ -189,6 +205,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     if (!createdTeam) {
       return {
         error: 'Failed to create team. Please try again.',
+        firstName,
+        lastName,
         email,
         password
       };
@@ -339,22 +357,23 @@ export const deleteAccount = validatedActionWithUser(
 );
 
 const updateAccountSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email('Invalid email address')
 });
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
   async (data, _, user) => {
-    const { name, email } = data;
+    const { firstName, lastName, email } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
     await Promise.all([
-      db.update(users).set({ name, email }).where(eq(users.id, user.id)),
-      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
+      db.update(users).set({ firstName, lastName, email, updatedAt: new Date() }).where(eq(users.id, user.id)),
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PROFILE)
     ]);
 
-    return { name, success: 'Account updated successfully.' };
+    return { firstName, lastName, email, success: 'Account updated successfully.' };
   }
 );
 
@@ -455,5 +474,174 @@ export const inviteTeamMember = validatedActionWithUser(
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
 
     return { success: 'Invitation sent successfully' };
+  }
+);
+
+
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
+  email: z.string().email('Invalid email address'),
+  bio: z.string().max(500).optional(),
+  phoneNumber: z.string().max(50).optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+  streetAddress: z.string().max(255).optional(),
+  city: z.string().max(100).optional(),
+  region: z.string().max(100).optional(),
+  postalCode: z.string().max(20).optional(),
+  country: z.string().max(100).optional(),
+  profileImageUrl: z.string().url('Invalid URL format').optional().or(z.literal('')),
+});
+
+export const updateProfile = validatedActionWithUser(
+  updateProfileSchema,
+  async (data, _, user) => {
+    const userWithTeam = await getUserWithTeam(user.id);
+    
+    const updateData: any = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      updatedAt: new Date()
+    };
+    
+    if (data.bio !== undefined) updateData.bio = data.bio || null;
+    if (data.phoneNumber !== undefined) updateData.phoneNumber = data.phoneNumber || null;
+    if (data.dateOfBirth !== undefined) updateData.dateOfBirth = data.dateOfBirth || null;
+    if (data.gender !== undefined) updateData.gender = data.gender || null;
+    if (data.streetAddress !== undefined) updateData.streetAddress = data.streetAddress || null;
+    if (data.city !== undefined) updateData.city = data.city || null;
+    if (data.region !== undefined) updateData.region = data.region || null;
+    if (data.postalCode !== undefined) updateData.postalCode = data.postalCode || null;
+    if (data.country !== undefined) updateData.country = data.country || null;
+    if (data.profileImageUrl !== undefined) updateData.profileImageUrl = data.profileImageUrl || null;
+
+    await Promise.all([
+      db.update(users).set(updateData).where(eq(users.id, user.id)),
+      logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_PROFILE)
+    ]);
+
+    return { ...data, success: 'Profile updated successfully.' };
+  }
+);
+
+const createPostSchema = z.object({
+  title: z.string().max(255).optional(),
+  content: z.string().min(1, 'Content is required'),
+  visibility: z.enum(['public', 'private', 'friends_only']).default('public'),
+  tags: z.string().optional(),
+});
+
+export const createPost = validatedActionWithUser(
+  createPostSchema,
+  async (data, _, user) => {
+    const { title, content, visibility, tags } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    const newPost: any = {
+      authorId: user.id,
+      title: title || null,
+      content,
+      visibility,
+      tags: tags ? JSON.stringify(tags.split(',').map(tag => tag.trim())) : null,
+      isPublished: true
+    };
+
+    try {
+      const [createdPost] = await db.insert(posts).values(newPost).returning();
+      
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.CREATE_POST,
+      );
+
+      return { success: 'Post created successfully.' };
+    } catch (error) {
+      return { error: 'Failed to create post. Please try again.' };
+    }
+  }
+);
+
+const updatePostSchema = z.object({
+  postId: z.number(),
+  title: z.string().max(255).optional(),
+  content: z.string().min(1, 'Content is required'),
+  visibility: z.enum(['public', 'private', 'friends_only']),
+  tags: z.string().optional(),
+});
+
+export const updatePost = validatedActionWithUser(
+  updatePostSchema,
+  async (data, _, user) => {
+    const { postId, title, content, visibility, tags } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    const existingPost = await db.query.posts.findFirst({
+      where: and(eq(posts.id, postId), eq(posts.authorId, user.id))
+    });
+
+    if (!existingPost) {
+      return { error: 'Post not found or you do not have permission to edit it.' };
+    }
+
+    const updateData: any = {
+      title: title || null,
+      content,
+      visibility,
+      tags: tags ? JSON.stringify(tags.split(',').map(tag => tag.trim())) : null,
+      updatedAt: new Date()
+    };
+
+    try {
+      await db.update(posts).set(updateData).where(eq(posts.id, postId));
+      
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.UPDATE_POST,
+      );
+
+      return { success: 'Post updated successfully.' };
+    } catch (error) {
+      return { error: 'Failed to update post. Please try again.' };
+    }
+  }
+);
+
+const deletePostSchema = z.object({
+  postId: z.number(),
+});
+
+export const deletePost = validatedActionWithUser(
+  deletePostSchema,
+  async (data, _, user) => {
+    const { postId } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    const existingPost = await db.query.posts.findFirst({
+      where: and(eq(posts.id, postId), eq(posts.authorId, user.id))
+    });
+
+    if (!existingPost) {
+      return { error: 'Post not found or you do not have permission to delete it.' };
+    }
+
+    try {
+      await db.update(posts)
+        .set({ deletedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(posts.id, postId));
+      
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.DELETE_POST,
+      );
+
+      return { success: 'Post deleted successfully.' };
+    } catch (error) {
+      return { error: 'Failed to delete post. Please try again.' };
+    }
   }
 );

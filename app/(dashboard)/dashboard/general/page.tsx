@@ -14,34 +14,53 @@ import { Suspense } from 'react';
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type ActionState = {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   error?: string;
   success?: string;
 };
 
 type AccountFormProps = {
   state: ActionState;
-  nameValue?: string;
+  firstNameValue?: string;
+  lastNameValue?: string;
   emailValue?: string;
 };
 
 function AccountForm({
   state,
-  nameValue = '',
+  firstNameValue = '',
+  lastNameValue = '',
   emailValue = ''
 }: AccountFormProps) {
   return (
     <>
       <div>
-        <Label htmlFor="name" className="mb-2">
-          Name
+        <Label htmlFor="firstName" className="mb-2">
+          First Name
         </Label>
         <Input
-          id="name"
-          name="name"
-          placeholder="Enter your name"
-          defaultValue={state.name || nameValue}
+          id="firstName"
+          name="firstName"
+          placeholder="Enter your first name"
+          defaultValue={state.firstName || firstNameValue}
           required
+          maxLength={100}
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="lastName" className="mb-2">
+          Last Name
+        </Label>
+        <Input
+          id="lastName"
+          name="lastName"
+          placeholder="Enter your last name"
+          defaultValue={state.lastName || lastNameValue}
+          required
+          maxLength={100}
         />
       </div>
       <div>
@@ -66,7 +85,8 @@ function AccountFormWithData({ state }: { state: ActionState }) {
   return (
     <AccountForm
       state={state}
-      nameValue={user?.name ?? ''}
+      firstNameValue={user?.firstName ?? ''}
+      lastNameValue={user?.lastName ?? ''}
       emailValue={user?.email ?? ''}
     />
   );
