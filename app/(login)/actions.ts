@@ -11,6 +11,9 @@ import {
   activityLogs,
   roles,
   posts,
+  comments,
+  postReactions,
+  commentReactions,
   type NewUser,
   type NewTeam,
   type NewTeamMember,
@@ -565,7 +568,7 @@ export const createPost = validatedActionWithUser(
 );
 
 const updatePostSchema = z.object({
-  postId: z.number(),
+  postId: z.string().transform((val) => parseInt(val, 10)),
   title: z.string().max(255).optional(),
   content: z.string().min(1, 'Content is required'),
   visibility: z.enum(['public', 'private', 'friends_only']),
@@ -611,7 +614,7 @@ export const updatePost = validatedActionWithUser(
 );
 
 const deletePostSchema = z.object({
-  postId: z.number(),
+  postId: z.string().transform((val) => parseInt(val, 10)),
 });
 
 export const deletePost = validatedActionWithUser(
@@ -642,6 +645,147 @@ export const deletePost = validatedActionWithUser(
       return { success: 'Post deleted successfully.' };
     } catch (error) {
       return { error: 'Failed to delete post. Please try again.' };
+    }
+  }
+);
+
+const reactToPostSchema = z.object({
+  postId: z.string().transform((val) => parseInt(val, 10)),
+  reactionType: z.enum(['like', 'dislike', 'love', 'laugh', 'angry', 'sad']),
+});
+
+export const reactToPost = validatedActionWithUser(
+  reactToPostSchema,
+  async (data, _, user) => {
+    const { postId, reactionType } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    try {
+      const existingReaction = await db.query.postReactions.findFirst({
+        where: and(
+          eq(postReactions.postId, postId),
+          eq(postReactions.userId, user.id)
+        )
+      });
+
+      if (existingReaction) {
+        if (existingReaction.reactionType === reactionType) {
+          await db.delete(postReactions)
+            .where(eq(postReactions.id, existingReaction.id));
+          
+          await logActivity(
+            userWithTeam?.teamId,
+            user.id,
+            ActivityType.REMOVE_REACTION,
+          );
+          
+          return { success: 'Reaction removed.' };
+        } else {
+          await db.update(postReactions)
+            .set({ reactionType })
+            .where(eq(postReactions.id, existingReaction.id));
+        }
+      } else {
+        await db.insert(postReactions).values({
+          postId,
+          userId: user.id,
+          reactionType
+        });
+      }
+
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.REACT_TO_POST,
+      );
+
+      return { success: 'Reaction updated.' };
+    } catch (error) {
+      return { error: 'Failed to update reaction.' };
+    }
+  }
+);
+
+const createCommentSchema = z.object({
+  postId: z.string().transform((val) => parseInt(val, 10)),
+  content: z.string().min(1, 'Comment content is required'),
+  parentId: z.string().transform((val) => parseInt(val, 10)).optional(),
+});
+
+export const createComment = validatedActionWithUser(
+  createCommentSchema,
+  async (data, _, user) => {
+    const { postId, content, parentId } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    try {
+      await db.insert(comments).values({
+        postId,
+        authorId: user.id,
+        content,
+        parentId: parentId || null
+      });
+
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.CREATE_COMMENT,
+      );
+
+      return { success: 'Comment added successfully.' };
+    } catch (error) {
+      return { error: 'Failed to add comment.' };
+    }
+  }
+);
+
+const reactToCommentSchema = z.object({
+  commentId: z.string().transform((val) => parseInt(val, 10)),
+  reactionType: z.enum(['like', 'dislike', 'love', 'laugh', 'angry', 'sad']),
+});
+
+export const reactToComment = validatedActionWithUser(
+  reactToCommentSchema,
+  async (data, _, user) => {
+    const { commentId, reactionType } = data;
+    const userWithTeam = await getUserWithTeam(user.id);
+
+    try {
+      const existingReaction = await db.query.commentReactions.findFirst({
+        where: and(
+          eq(commentReactions.commentId, commentId),
+          eq(commentReactions.userId, user.id)
+        )
+      });
+
+      if (existingReaction) {
+        if (existingReaction.reactionType === reactionType) {
+          await db.delete(commentReactions)
+            .where(eq(commentReactions.id, existingReaction.id));
+          
+          return { success: 'Reaction removed.' };
+        } else {
+          await db.update(commentReactions)
+            .set({ reactionType })
+            .where(eq(commentReactions.id, existingReaction.id));
+        }
+      } else {
+        await db.insert(commentReactions).values({
+          commentId,
+          userId: user.id,
+          reactionType
+        });
+      }
+
+      await logActivity(
+        userWithTeam?.teamId,
+        user.id,
+        ActivityType.REACT_TO_COMMENT,
+      );
+
+      return { success: 'Reaction updated.' };
+    } catch (error) {
+      return { error: 'Failed to update reaction.' };
     }
   }
 );

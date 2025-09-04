@@ -255,6 +255,16 @@ export async function getPosts() {
         reactions: true,
         comments: {
           where: isNull(comments.deletedAt),
+          with: {
+            author: {
+              columns: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profileImageUrl: true,
+              }
+            }
+          }
         }
       },
       orderBy: desc(posts.createdAt),
