@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Inter } from 'next/font/google';
+import { Manrope, Inter, Roboto } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
@@ -14,7 +14,9 @@ export const viewport: Viewport = {
 };
 
 const manrope = Manrope({ subsets: ['latin'] });
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin']});
+const roboto = Roboto({ subsets: ['latin'], weight: ['400', '700'] });
+
 
 export default function RootLayout({
   children
@@ -24,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.className}`}
+      className={`${roboto.className}`}
     >
       <body className="min-h-[100dvh] bg-background text-foreground">
         <SWRConfig

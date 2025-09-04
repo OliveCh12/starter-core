@@ -15,7 +15,7 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const navItems = [
-    { href: '/dashboard/profile', icon: User, label: 'Profil'},
+    { href: '/dashboard/profil', icon: User, label: 'Profil'},
     { href: '/dashboard', icon: Users, label: 'Team' },
     { href: '/dashboard/posts', icon: Newspaper, label: 'Posts' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
@@ -53,10 +53,8 @@ export default function DashboardLayout({
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} passHref>
                 <Button
-                  variant={pathname === item.href ? 'secondary' : 'ghost'}
-                  className={`shadow-none my-1 w-full justify-start ${
-                    pathname === item.href ? 'bg-gray-100' : ''
-                  }`}
+                  variant={pathname === item.href ? 'default' : 'ghost'}
+                  className={`shadow-none my-1 w-full justify-start`}
                   onClick={() => setIsSidebarOpen(false)}
                 >
                   <item.icon className="h-4 w-4" />
@@ -68,7 +66,7 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4">{children}</main>
       </div>
     </div>
   );
