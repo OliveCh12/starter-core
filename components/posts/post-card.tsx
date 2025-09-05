@@ -73,8 +73,8 @@ export function PostCard({ post, currentUserId, onUpdate }: PostCardProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+  const formatDate = (date: string | Date) => {
+    return formatDistanceToNow(new Date(date), { addSuffix: true });
   };
 
   const tags = (() => {

@@ -14,7 +14,9 @@ import {
   Newspaper,
   LogOut,
   ArrowLeft,
-  Home
+  Home,
+  Bell,
+  Palette
 } from 'lucide-react';
 import { signOut } from '@/app/(login)/actions';
 
@@ -26,6 +28,8 @@ const navigationItems = [
 
 const settingsItems = [
   { href: '/dashboard/settings/general', icon: Settings, label: 'General' },
+  { href: '/dashboard/settings/notifications', icon: Bell, label: 'Notifications' },
+  { href: '/dashboard/settings/appearance', icon: Palette, label: 'Appearance' },
   { href: '/dashboard/settings/activity', icon: Activity, label: 'Activity' },
   { href: '/dashboard/settings/security', icon: Shield, label: 'Security' },
 ];

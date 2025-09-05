@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from 'next';
 import { Manrope, Inter, Roboto } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
+import { ThemeProvider } from '@/components/providers/theme-provider';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Next.js SaaS Starter',
@@ -27,20 +29,24 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${roboto.className}`}
+      suppressHydrationWarning
     >
       <body className="min-h-[100dvh] bg-background text-foreground">
-        <SWRConfig
-          value={{
-            fallback: {
-              // We do NOT await here
-              // Only components that read this data will suspend
-              '/api/user': getUser(),
-              '/api/team': getTeamForUser()
-            }
-          }}
-        >
-          {children}
-        </SWRConfig>
+        <ThemeProvider>
+          <SWRConfig
+            value={{
+              fallback: {
+                // We do NOT await here
+                // Only components that read this data will suspend
+                '/api/user': getUser(),
+                '/api/team': getTeamForUser()
+              }
+            }}
+          >
+            {children}
+            <Toaster richColors closeButton />
+          </SWRConfig>
+        </ThemeProvider>
       </body>
     </html>
   );
