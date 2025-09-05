@@ -18,13 +18,13 @@ export async function POST(request: NextRequest) {
     processedFormData.append('postId', postId.toString());
     processedFormData.append('reactionType', formData.get('reactionType') as string);
     
-    const result = await reactToPost(null, processedFormData);
+    const result = await reactToPost({}, processedFormData);
     
     if (result.error) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     
-    return NextResponse.json({ success: result.success });
+    return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to react to post' },
