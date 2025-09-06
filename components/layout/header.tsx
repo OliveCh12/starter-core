@@ -107,10 +107,10 @@ function QuickActions() {
 
   return (
     <div className="hidden md:flex items-center space-x-2">
-      <Button variant="ghost" size="sm" asChild>
+      <Button variant="secondary" size="sm" asChild>
         <Link href="/dashboard/posts">
-          <Plus className="h-4 w-4 mr-2" />
           New Post
+          <Plus className="h-4 w-4" />
         </Link>
       </Button>
       <Button variant="ghost" size="sm">
