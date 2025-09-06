@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut, Plus, Search, Bell, HelpCircle, Settings, Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,21 +83,6 @@ function UserMenu() {
   );
 }
 
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  
-  return (
-    <Button 
-      variant="ghost" 
-      size="sm"
-      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-    >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
-    </Button>
-  );
-}
 
 function QuickActions() {
   const { data: user } = useSWR<User>('/api/user', fetcher);
@@ -127,7 +111,6 @@ function QuickActions() {
           <span className="sr-only">Help</span>
         </Link>
       </Button>
-      <ThemeToggle />
     </div>
   );
 }

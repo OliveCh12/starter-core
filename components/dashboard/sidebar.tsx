@@ -21,7 +21,7 @@ import {
 import { signOut } from '@/app/(login)/actions';
 
 const navigationItems = [
-  { href: '/dashboard', icon: Home, label: 'Home' },
+  { href: '/dashboard/home', icon: Home, label: 'Home' },
   { href: '/dashboard/profil', icon: User, label: 'Profile' },
   { href: '/dashboard/team', icon: Users, label: 'Team' },
   { href: '/dashboard/posts', icon: Newspaper, label: 'Posts' },

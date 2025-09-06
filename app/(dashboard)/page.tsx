@@ -1,6 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CreditCard, Database } from 'lucide-react';
-import { Terminal } from './terminal';
+import dynamic from 'next/dynamic';
+
+const Terminal = dynamic(() => import('./terminal').then(mod => ({ default: mod.Terminal })), {
+  ssr: false,
+  loading: () => <div className="w-full h-48 bg-gray-900 rounded-lg animate-pulse" />
+});
 
 export default function HomePage() {
   return (
