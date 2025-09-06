@@ -27,7 +27,8 @@ import {
   Italic,
   List,
   Link,
-  ArrowLeft
+  ArrowLeft,
+  Send
 } from "lucide-react";
 import { createPost } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
@@ -305,8 +306,8 @@ const CreatePostPage = () => {
                     </>
                   ) : (
                     <>
-                      <Plus className="mr-2 h-4 w-4" />
                       Publish Post
+                      <Send className="h-4 w-4" />
                     </>
                   )}
                 </Button>

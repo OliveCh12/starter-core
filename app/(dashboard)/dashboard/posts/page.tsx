@@ -80,8 +80,8 @@ const PostsPage = () => {
           size="sm"
           onClick={() => router.push('/dashboard/posts/create')}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Post
+          New Post
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
 
