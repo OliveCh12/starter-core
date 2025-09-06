@@ -90,7 +90,7 @@ export function Sidebar({ isSidebarOpen, setIsSidebarOpen }: SidebarProps) {
           <div className="mb-6 pb-4 border-b">
             <Link href="/dashboard" passHref>
               <Button
-                variant="outline"
+                variant="secondary"
                 className="w-full justify-start text-muted-foreground hover:text-foreground"
                 onClick={() => setIsSidebarOpen(false)}
               >

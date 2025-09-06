@@ -1,4 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Settings,
   LogOut,
@@ -16,10 +19,13 @@ import {
   UserCheck,
   Shield,
   CreditCard,
+  Clock,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
 import { getActivityLogs } from '@/lib/db/queries';
+import { formatDistanceToNow, format, isToday, isYesterday, parseISO } from 'date-fns';
 
 const iconMap: Record<ActivityType, LucideIcon> = {
   // Authentication
@@ -75,18 +81,58 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.DOWNGRADE_SUBSCRIPTION]: CreditCard,
 };
 
-function getRelativeTime(date: Date) {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+const activityCategories: Record<string, string[]> = {
+  authentication: [ActivityType.SIGN_UP, ActivityType.SIGN_IN, ActivityType.SIGN_OUT, ActivityType.EMAIL_VERIFIED],
+  account: [ActivityType.UPDATE_PASSWORD, ActivityType.DELETE_ACCOUNT, ActivityType.UPDATE_PROFILE, ActivityType.UPDATE_PREFERENCES],
+  content: [ActivityType.CREATE_POST, ActivityType.UPDATE_POST, ActivityType.DELETE_POST, ActivityType.VIEW_POST, ActivityType.CREATE_COMMENT, ActivityType.UPDATE_COMMENT, ActivityType.DELETE_COMMENT],
+  social: [ActivityType.REACT_TO_POST, ActivityType.REACT_TO_COMMENT, ActivityType.REMOVE_REACTION, ActivityType.FOLLOW_USER, ActivityType.UNFOLLOW_USER, ActivityType.BLOCK_USER, ActivityType.UNBLOCK_USER, ActivityType.VIEW_PROFILE],
+  teams: [ActivityType.CREATE_TEAM, ActivityType.UPDATE_TEAM, ActivityType.DELETE_TEAM, ActivityType.JOIN_TEAM, ActivityType.LEAVE_TEAM, ActivityType.REMOVE_TEAM_MEMBER, ActivityType.INVITE_TEAM_MEMBER, ActivityType.ACCEPT_INVITATION, ActivityType.DECLINE_INVITATION],
+  subscription: [ActivityType.SUBSCRIBE, ActivityType.UNSUBSCRIBE, ActivityType.UPGRADE_SUBSCRIPTION, ActivityType.DOWNGRADE_SUBSCRIPTION],
+};
 
-  if (diffInSeconds < 60) return 'just now';
-  if (diffInSeconds < 3600)
-    return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)} days ago`;
-  return date.toLocaleDateString();
+const categoryColors: Record<string, string> = {
+  authentication: 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+  account: 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300',
+  content: 'bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
+  social: 'bg-pink-50 text-pink-700 dark:bg-pink-950 dark:text-pink-300',
+  teams: 'bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  subscription: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
+  other: 'bg-gray-50 text-gray-700 dark:bg-gray-950 dark:text-gray-300',
+};
+
+function getActivityCategory(action: ActivityType): string {
+  for (const [category, actions] of Object.entries(activityCategories)) {
+    if (actions.includes(action)) {
+      return category;
+    }
+  }
+  return 'other';
+}
+
+function formatRelativeTime(timestamp: string | Date): string {
+  const date = typeof timestamp === 'string' ? parseISO(timestamp) : timestamp;
+  
+  if (isToday(date)) {
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
+  
+  if (isYesterday(date)) {
+    return `Yesterday at ${format(date, 'HH:mm')}`;
+  }
+  
+  return format(date, 'MMM d, yyyy \'at\' HH:mm');
+}
+
+function formatDateKey(timestamp: Date): string {
+  return format(timestamp, 'yyyy-MM-dd');
+}
+
+function formatTimeDisplay(timestamp: Date): string {
+  return format(timestamp, 'HH:mm');
+}
+
+function formatDateTimeAttribute(timestamp: Date): string {
+  return timestamp.toISOString();
 }
 
 function formatAction(action: ActivityType): string {
@@ -151,56 +197,149 @@ function formatAction(action: ActivityType): string {
 export default async function ActivityPage() {
   const logs = await getActivityLogs();
 
-  return (
-    <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        Activity Log
-      </h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {logs.length > 0 ? (
-            <ul className="space-y-4">
-              {logs.map((log) => {
-                const Icon = iconMap[log.action as ActivityType] || Settings;
-                const formattedAction = formatAction(
-                  log.action as ActivityType
-                );
+  // Group activities by date
+  const groupedLogs = logs.reduce((acc, log) => {
+    const date = formatDateKey(log.timestamp);
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(log);
+    return acc;
+  }, {} as Record<string, typeof logs>);
 
-                return (
-                  <li key={log.id} className="flex items-center space-x-4">
-                    <div className="bg-orange-100 rounded-full p-2">
-                      <Icon className="w-5 h-5 text-orange-600" />
+  const sortedDates = Object.keys(groupedLogs).sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+          <Activity className="w-4 h-4 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Activity Log</h1>
+          <p className="text-sm text-muted-foreground">
+            Track your recent activities and account changes
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-6">
+        {logs.length > 0 ? (
+          <div className="space-y-6">
+            {sortedDates.map((date) => {
+              const dayLogs = groupedLogs[date];
+              const dateObj = parseISO(date);
+              
+              return (
+                <Card key={date} className="overflow-hidden">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <CardTitle className="text-base font-medium">
+                        {isToday(dateObj) 
+                          ? 'Today' 
+                          : isYesterday(dateObj) 
+                            ? 'Yesterday' 
+                            : format(dateObj, 'EEEE, MMMM d, yyyy')
+                        }
+                      </CardTitle>
+                      <Badge variant="secondary" className="ml-auto">
+                        {dayLogs.length} {dayLogs.length === 1 ? 'activity' : 'activities'}
+                      </Badge>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {formattedAction}
-                        {log.ipAddress && ` from IP ${log.ipAddress}`}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {getRelativeTime(new Date(log.timestamp))}
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-4">
+                      {dayLogs.map((log, index) => {
+                        const Icon = iconMap[log.action as ActivityType] || Settings;
+                        const formattedAction = formatAction(log.action as ActivityType);
+                        const category = getActivityCategory(log.action as ActivityType);
+                        const categoryColor = categoryColors[category] || categoryColors.other;
+
+                        return (
+                          <div key={log.id}>
+                            <div className="flex items-start gap-4 group">
+                              <Avatar className="w-10 h-10 border-2 border-background shadow-sm">
+                                <AvatarFallback className={`${categoryColor}`}>
+                                  <Icon className="w-4 h-4" />
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-foreground">
+                                      {formattedAction}
+                                    </p>
+                                    {log.ipAddress && (
+                                      <p className="text-xs text-muted-foreground">
+                                        from IP {log.ipAddress}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <Badge variant="outline" className="text-xs capitalize">
+                                      {category}
+                                    </Badge>
+                                    <time className="text-xs text-muted-foreground" dateTime={formatDateTimeAttribute(log.timestamp)}>
+                                      {formatTimeDisplay(log.timestamp)}
+                                    </time>
+                                  </div>
+                                </div>
+                                
+                                <p className="text-xs text-muted-foreground">
+                                  {formatRelativeTime(log.timestamp)}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {index < dayLogs.length - 1 && (
+                              <Separator className="my-4 ml-14" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            
+            {/* Summary Card */}
+            <Card className="border-dashed">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center text-center">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
+                      <CheckCircle className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">All caught up!</p>
+                      <p className="text-xs text-muted-foreground">
+                        You've viewed all your recent activity
                       </p>
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-12">
-              <AlertCircle className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No activity yet
-              </h3>
-              <p className="text-sm text-gray-500 max-w-sm">
-                When you perform actions like signing in or updating your
-                account, they'll appear here.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </section>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center text-center py-12">
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                  <Activity className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <CardTitle className="mb-2">No activity yet</CardTitle>
+                <CardDescription className="max-w-sm">
+                  When you perform actions like signing in, updating your profile, or creating content, they'll appear here.
+                </CardDescription>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 }
